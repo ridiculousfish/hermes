@@ -51,6 +51,18 @@ TEST(OSCompatTest, CurrentRSS) {
   EXPECT_GE(oscompat::current_rss(), beginRSS);
 }
 
+TEST(OSCompatTest, AllocateAligned) {
+  for (size_t sz = sizeof(void *), align = alignof(void *); align <= 4096;
+       sz += 1, align *= 2) {
+    llvm::ErrorOr<void *> alloc = oscompat::allocate_aligned(sz, align);
+    ASSERT_TRUE(bool(alloc)) << "Small allocation should not fail in testing";
+    void *ptr = alloc.get();
+    EXPECT_EQ(reinterpret_cast<uintptr_t>(ptr) % align, 0)
+        << "Pointer was not aligned";
+    oscompat::free_aligned(ptr);
+  }
+}
+
 #ifdef __linux__
 TEST(OSCompatTest, Scheduling) {
   // At least one CPU should be set.

@@ -108,6 +108,15 @@ enum class MAdvice { Random, Sequential };
 /// \return true on success, false on error.
 bool vm_madvise(void *p, size_t sz, MAdvice advice);
 
+/// Allocates a region of memory of size \p sz aligned to \p alignment.
+/// The alignment must be a power of 2, and at least alignof(void*), but does
+/// NOT need to be a multiple of page_size(). Use free_aligned() to deallocate
+/// it.
+llvm::ErrorOr<void *> allocate_aligned(size_t sz, size_t alignment);
+
+/// Deallocate memory obtained from allocate_aligned().
+void free_aligned(void *p);
+
 /// Return the number of pages in the given region that are currently in RAM.
 /// If \p runs is provided, then populate it with the lengths of runs of
 /// consecutive pages with the same resident/non-resident status, alternating

@@ -308,6 +308,21 @@ bool vm_madvise(void *p, size_t sz, MAdvice advice) {
   return false;
 }
 
+llvm::ErrorOr<void *> allocate_aligned(size_t sz, size_t alignment) {
+  assert(
+      alignment >= alignof(void *) && (alignment & (alignment - 1)) == 0 &&
+      "Invalid alignment");
+  void *res = _aligned_malloc(sz, alignment);
+  if (!res) {
+    return std::error_code(GetLastError(), std::system_category());
+  }
+  return res;
+}
+
+void free_aligned(void *p) {
+  _aligned_free(p);
+}
+
 int pages_in_ram(const void *p, size_t sz, llvm::SmallVectorImpl<int> *runs) {
   // Not yet supported.
   return -1;
