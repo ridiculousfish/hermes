@@ -29,6 +29,8 @@ template <typename T>
 class Handle;
 template <typename T>
 class MutableHandle;
+template <typename T>
+class DynHandle;
 
 /// This class is used in performance-sensitive context in situations where we
 /// want to encode in the function signature that allocations may be performed,
@@ -422,6 +424,8 @@ static_assert(
 /// explicit as possible by using this class.
 template <typename T>
 class MutableHandle : public Handle<T> {
+  template <class U>
+  friend class DynHandle;
   MutableHandle(const MutableHandle &) = delete;
   void operator=(const MutableHandle &) = delete;
 
