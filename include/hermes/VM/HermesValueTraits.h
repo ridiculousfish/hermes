@@ -137,6 +137,12 @@ struct HermesValueTraits<HermesValue> {
   static const HermesValue *arrow(const HermesValue &value) {
     return &value;
   }
+
+ private:
+  // arrow() must be called with a reference; if we pass a temporary then we
+  // will return its address. Ensure that such calls are forbidden by hiding
+  // this method.
+  static void arrow(HermesValue &&value) {}
 };
 
 template <>
