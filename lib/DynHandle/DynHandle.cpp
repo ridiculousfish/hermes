@@ -51,3 +51,16 @@ DynHandleAllocator::Slot *DynHandleAllocator::allocateSlotSlowPath() {
   assert(res && "Freshly allocated chunks should always have slots");
   return res;
 }
+
+void DynHandleAllocator::markRoots(GC *gc, SlotAcceptor &acceptor) {
+  (void)gc;
+  // Mark every chunk.
+  // Note free list entries are encoded as native pointers, which are ignored by
+  // the GC.
+  for (Chunk *cursor = chunks_; cursor != nullptr; cursor = cursor->next) {
+    Slot *slots = cursor->getSlots();
+    for (uint32_t i = 0, max = cursor->allocatedEnd; i < max; i++) {
+      acceptor.accept(slots[i].phv);
+    }
+  }
+}

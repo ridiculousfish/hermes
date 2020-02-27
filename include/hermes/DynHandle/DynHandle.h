@@ -36,6 +36,11 @@ class DynHandleAllocator {
       typename HermesValueTraits<T>::value_type value =
           HermesValueTraits<T>::defaultValue());
 
+  /// markRoots() is designed to be hooked up to Runtime via
+  /// Runtime::addCustomRootsFunction(), allowing for marking the roots of this
+  /// allocator.
+  void markRoots(GC *, SlotAcceptor &);
+
   DynHandleAllocator() = default;
   ~DynHandleAllocator();
 
