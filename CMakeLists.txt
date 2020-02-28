@@ -515,12 +515,12 @@ add_subdirectory(include)
 add_subdirectory(lib)
 add_subdirectory(external)
 add_subdirectory(unittests)
-add_subdirectory(API)
+#add_subdirectory(API)
 
 # Make sure JSI is compiled with PIC
 set(save_CMAKE_POSITION_INDEPENDENT_CODE ${CMAKE_POSITION_INDEPENDENT_CODE})
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-add_subdirectory(${HERMES_JSI_DIR}/jsi ${CMAKE_CURRENT_BINARY_DIR}/jsi)
+#add_subdirectory(${HERMES_JSI_DIR}/jsi ${CMAKE_CURRENT_BINARY_DIR}/jsi)
 set(CMAKE_POSITION_INDEPENDENT_CODE ${save_CMAKE_POSITION_INDEPENDENT_CODE})
 
 if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/facebook)
