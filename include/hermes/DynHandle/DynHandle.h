@@ -49,6 +49,8 @@ class DynHandleAllocator {
   struct Slot final {
     PinnedHermesValue phv;
 
+    Slot() = default;
+
     // Copying and moving is prohibited.
     Slot(const Slot &) = delete;
     void operator=(const Slot &) = delete;
@@ -146,6 +148,11 @@ class DynHandle {
     return HermesValueTraits<T>::decode(getHermesValue());
   }
 
+  /// Set the underlying value.
+  void set(value_type v) const {
+    slot()->phv = HermesValueTraits<T>::encode(v);
+  }
+
   /// Access the underlying value as a HermesValue.
   const HermesValue &getHermesValue() const {
     return slot()->phv;
@@ -154,13 +161,22 @@ class DynHandle {
   /// Produce a Handle from this DynHandle.
   /// The MutableHandle is valid as long as the DynHandle is alive.
   /* implicit */ operator Handle<T>() const {
-    return Handle<T>(&slot()->phv);
+    return Handle<T>::vmcast(&slot()->phv);
   }
 
   /// Produce a MutableHandle from this DynHandle.
   /// The MutableHandle is valid as long as the DynHandle is valid.
   /* implicit */ operator MutableHandle<T>() {
     return MutableHandle<T>(&slot()->phv, false);
+  }
+
+  /// Explicit functions for handles.
+  MutableHandle<T> handle() {
+    return *this;
+  }
+
+  Handle<T> handle() const {
+    return *this;
   }
 
   /// Dereference to obtain a T.
@@ -178,12 +194,20 @@ class DynHandle {
   void operator=(const DynHandle &) = delete;
 
   /// Moving is permitted, leaving the moved-from DynHandle as invalid.
-  DynHandle(DynHandle &&rhs) : slot_(rhs.slot_) {
+  template <
+      typename U,
+      typename =
+          typename std::enable_if<IsHermesValueConvertible<U, T>::value>::type>
+  DynHandle(DynHandle<U> &&rhs) : slot_(rhs.slot_) {
     rhs.slot_ = nullptr;
   }
 
   /// Move assignment is permitted, leaving the moved-from DynHandle as invalid.
-  DynHandle &operator=(DynHandle &&rhs) {
+  template <
+      typename U,
+      typename =
+          typename std::enable_if<IsHermesValueConvertible<U, T>::value>::type>
+  DynHandle &operator=(DynHandle<U> &&rhs) {
     freeThis();
     std::swap(slot_, rhs.slot_);
     return *this;
@@ -198,6 +222,11 @@ class DynHandle {
   // A DynHandle is invalid if it is default constructed, or moved-from.
   bool valid() const {
     return slot_ != nullptr;
+  }
+
+  /// Make the dynhandle invalid.
+  void invalidate() {
+    freeThis();
   }
 
   ~DynHandle() {
@@ -240,6 +269,8 @@ class DynHandle {
 
   friend DynHandleAllocator;
   friend DynHandleTests;
+  template <class U>
+  friend class DynHandle;
 };
 
 } // namespace vm
