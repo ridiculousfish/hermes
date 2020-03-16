@@ -204,7 +204,7 @@ if (HERMES_IS_ANDROID)
 endif()
 
 if (HERMES_IS_MOBILE_BUILD)
-  add_definitions(-DHERMES_IS_MOBILE_BUILD)
+  add_exported_compile_def(-DHERMES_IS_MOBILE_BUILD)
 endif()
 
 # Enable debug mode by default
@@ -619,3 +619,8 @@ add_custom_command(
 add_custom_target(
   github-cli-release
   DEPENDS ${HERMES_GITHUB_DIR}/${HERMES_CLI_GITHUB_FILE})
+
+# Hackish, Hermes should provide this.
+set_target_properties(hermesVMRuntime PROPERTIES
+  INTERFACE_COMPILE_DEFINITIONS "${HERMES_EXPORTED_COMPILE_DEFS}"
+)
