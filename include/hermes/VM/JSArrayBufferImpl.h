@@ -13,6 +13,12 @@
 #include <cassert>
 #include <memory>
 
+#ifdef HERMES_NRD_IMPLS
+
+#include "hermesnrd/DataBufferArrayBufferImpl.h"
+
+#else
+
 namespace hermes {
 namespace vm {
 
@@ -101,5 +107,7 @@ using ArrayBufferImpl = MallocArrayBufferImpl;
 
 } // namespace vm
 } // namespace hermes
+
+#endif
 
 #endif

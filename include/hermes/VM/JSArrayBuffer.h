@@ -105,6 +105,10 @@ class JSArrayBuffer final : public JSObject {
 
   /// Access the underlying implementation.
   /// This is provided to support zero-copy ownership transfers.
+  llvm::Optional<ArrayBufferImpl> &impl() {
+    return impl_;
+  }
+
   const llvm::Optional<ArrayBufferImpl> &impl() const {
     return impl_;
   }

@@ -171,6 +171,10 @@ set(HERMES_MSVC_MP ON CACHE STRING
 set(EMSCRIPTEN_FASTCOMP ON CACHE BOOL
   "Emscripten is using the fastcomp backend instead of the LLVM one")
 
+set(HERMES_NRD_IMPLS ON CACHE BOOL
+  "Use NRD implementations of certain JS objects"
+)
+
 # Collect a list of exported #defines so that external
 # clients which #include Hermes headers get the same
 # set of defines.
@@ -179,6 +183,10 @@ macro(add_exported_compile_def value)
     add_definitions(-D${value})
     list(APPEND HERMES_EXPORTED_COMPILE_DEFS ${value})
 endmacro()
+
+if (HERMES_NRD_IMPLS)
+  add_exported_compile_def(HERMES_NRD_IMPLS=1)
+endif(HERMES_NRD_IMPL)
 
 if (HERMES_IS_ANDROID)
   set(HERMES_IS_MOBILE_BUILD TRUE)
