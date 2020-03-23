@@ -152,7 +152,7 @@ void JSDataView::set(
       littleEndian ? llvm::support::endianness::little
                    : llvm::support::endianness::big);
   memcpy(
-      buffer_.get(runtime)->getDataBlock() + offset_ + offset,
+      buffer_.get(runtime)->getDataBlockForWrite() + offset_ + offset,
       &value,
       sizeof(T));
 }

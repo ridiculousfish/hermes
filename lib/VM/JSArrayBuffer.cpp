@@ -107,6 +107,16 @@ PseudoHandle<JSArrayBuffer> JSArrayBuffer::create(
           numOverlapSlots<JSArrayBuffer>() + ANONYMOUS_PROPERTY_SLOTS)));
 }
 
+PseudoHandle<JSArrayBuffer> JSArrayBuffer::create(
+    Runtime *runtime,
+    Handle<JSObject> parentHandle,
+    ArrayBufferImpl &&impl) {
+  auto res = create(runtime, parentHandle);
+  res->impl_ = std::move(impl);
+  runtime->getHeap().creditExternalMemory(res.get(), res->impl_->size());
+  return res;
+}
+
 CallResult<Handle<JSArrayBuffer>> JSArrayBuffer::clone(
     Runtime *runtime,
     Handle<JSArrayBuffer> src,
@@ -151,42 +161,44 @@ void JSArrayBuffer::copyDataBlockBytes(
       dstIndex + count <= dst->size() &&
       "Cannot copy more data into a block than it has space for");
   // Copy from the other buffer.
-  memcpy(dst->getDataBlock() + dstIndex, src->getDataBlock() + srcIndex, count);
+  memcpy(
+      dst->getDataBlockForWrite() + dstIndex,
+      src->getDataBlock() + srcIndex,
+      count);
 }
 
 JSArrayBuffer::JSArrayBuffer(
     Runtime *runtime,
     JSObject *parent,
     HiddenClass *clazz)
-    : JSObject(runtime, &vt.base, parent, clazz),
-      data_(nullptr),
-      size_(0),
-      attached_(false) {}
+    : JSObject(runtime, &vt.base, parent, clazz) {}
 
 JSArrayBuffer::~JSArrayBuffer() {
   // We expect this finalizer to be called only by _finalizerImpl,
   // below.  That detaches the buffer; here we just assert that it
   // has been detached, and that resources have been deallocated.
-  assert(!attached_ && !data_ && size_ == 0);
+  assert(!impl_);
 }
 
 void JSArrayBuffer::_finalizeImpl(GCCell *cell, GC *gc) {
   auto *self = vmcast<JSArrayBuffer>(cell);
   // Need to untrack the native memory that may have been tracked by snapshots.
-  gc->getIDTracker().untrackNative(self->data_);
+  if (self->impl_) {
+    gc->getIDTracker().untrackNative(self->impl_->data());
+  }
   self->detach(gc);
   self->~JSArrayBuffer();
 }
 
 size_t JSArrayBuffer::_mallocSizeImpl(GCCell *cell) {
   const auto *buffer = vmcast<JSArrayBuffer>(cell);
-  return buffer->size_;
+  return buffer->size();
 }
 
 gcheapsize_t JSArrayBuffer::_externalMemorySizeImpl(
     hermes::vm::GCCell const *cell) {
   const auto *buffer = vmcast<JSArrayBuffer>(cell);
-  return buffer->size_;
+  return buffer->size();
 }
 
 void JSArrayBuffer::_snapshotAddEdgesImpl(
@@ -194,7 +206,7 @@ void JSArrayBuffer::_snapshotAddEdgesImpl(
     GC *gc,
     HeapSnapshot &snap) {
   auto *const self = vmcast<JSArrayBuffer>(cell);
-  if (!self->data_) {
+  if (!self->impl_ || !self->impl_->data()) {
     return;
   }
   // While this is an internal edge, it is to a native node which is not
@@ -202,7 +214,7 @@ void JSArrayBuffer::_snapshotAddEdgesImpl(
   snap.addNamedEdge(
       HeapSnapshot::EdgeType::Internal,
       "backingStore",
-      gc->getNativeID(self->data_));
+      gc->getNativeID(self->impl_->data()));
   // The backing store just has numbers, so there's no edges to add here.
 }
 
@@ -211,7 +223,7 @@ void JSArrayBuffer::_snapshotAddNodesImpl(
     GC *gc,
     HeapSnapshot &snap) {
   auto *const self = vmcast<JSArrayBuffer>(cell);
-  if (!self->data_) {
+  if (!self->impl_) {
     return;
   }
   // Add the native node before the JSArrayBuffer node.
@@ -220,38 +232,25 @@ void JSArrayBuffer::_snapshotAddNodesImpl(
   snap.endNode(
       HeapSnapshot::NodeType::Native,
       "JSArrayBufferData",
-      gc->getNativeID(self->data_),
-      self->size_,
+      gc->getNativeID(self->impl_->data()),
+      self->size(),
       allocationLocationTracker.isEnabled()
           ? allocationLocationTracker
-                .getStackTracesTreeNodeForAlloc(self->data_)
+                .getStackTracesTreeNodeForAlloc(self->impl_->data())
                 ->id
           : 0);
 }
 
 void JSArrayBuffer::detach(GC *gc) {
-  if (data_) {
-    gc->debitExternalMemory(this, size_);
-    free(data_);
-    data_ = nullptr;
-    size_ = 0;
-  } else {
-    assert(size_ == 0);
+  if (impl_) {
+    gc->debitExternalMemory(this, impl_->size());
+    impl_.reset();
   }
-  // Note that whether a buffer is attached is independent of whether
-  // it has allocated data.
-  attached_ = false;
 }
 
 ExecutionStatus
 JSArrayBuffer::createDataBlock(Runtime *runtime, size_type size, bool zero) {
   detach(&runtime->getHeap());
-  if (size == 0) {
-    // Even though there is no storage allocated, the spec requires an empty
-    // ArrayBuffer to still be considered as attached.
-    attached_ = true;
-    return ExecutionStatus::RETURNED;
-  }
   // If an external allocation of this size would exceed the GC heap size,
   // raise RangeError.
   if (LLVM_UNLIKELY(
@@ -261,20 +260,16 @@ JSArrayBuffer::createDataBlock(Runtime *runtime, size_type size, bool zero) {
         "Cannot allocate a data block for the ArrayBuffer");
   }
 
-  // Note that the result of calloc or malloc is immediately checked below, so
-  // we don't use the checked versions.
-  data_ = zero ? static_cast<uint8_t *>(calloc(sizeof(uint8_t), size))
-               : static_cast<uint8_t *>(malloc(sizeof(uint8_t) * size));
-  if (data_ == nullptr) {
+  // Note the spec requires an empty ArrayBuffer to still be considered as
+  // attached.
+  impl_ = ArrayBufferImpl::allocate(size, zero);
+  if (!impl_) {
     // Failed to allocate.
     return runtime->raiseRangeError(
         "Cannot allocate a data block for the ArrayBuffer");
-  } else {
-    attached_ = true;
-    size_ = size;
-    runtime->getHeap().creditExternalMemory(this, size);
-    return ExecutionStatus::RETURNED;
   }
+  runtime->getHeap().creditExternalMemory(this, size);
+  return ExecutionStatus::RETURNED;
 }
 
 } // namespace vm

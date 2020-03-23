@@ -8,6 +8,7 @@
 #ifndef HERMES_VM_JSARRAYBUFFER_H
 #define HERMES_VM_JSARRAYBUFFER_H
 
+#include "hermes/VM/JSArrayBufferImpl.h"
 #include "hermes/VM/JSObject.h"
 #include "hermes/VM/Runtime.h"
 
@@ -35,6 +36,12 @@ class JSArrayBuffer final : public JSObject {
   static PseudoHandle<JSArrayBuffer> create(
       Runtime *runtime,
       Handle<JSObject> prototype);
+
+  /// Create by acquiring an Impl.
+  static PseudoHandle<JSArrayBuffer> create(
+      Runtime *runtime,
+      Handle<JSObject> prototype,
+      ArrayBufferImpl &&impl);
 
   /// ES7 24.1.1.4
   /// NOTE: since SharedArrayBuffer does not exist, this does not use the
@@ -65,27 +72,42 @@ class JSArrayBuffer final : public JSObject {
   /// \return A pointer to the buffer owned by this object. This can be null
   ///   if the ArrayBuffer is empty.
   /// \pre attached() must be true
-  uint8_t *getDataBlock() {
+  const uint8_t *getDataBlock() const {
     assert(attached() && "Cannot get a data block from a detached ArrayBuffer");
-    return data_;
+    return impl_->data();
+  }
+
+  /// Retrieves a pointer to the held buffer, for writing.
+  /// \return A pointer to the buffer owned by this object. This can be null
+  ///   if the ArrayBuffer is empty.
+  /// \pre attached() must be true
+  uint8_t *getDataBlockForWrite() {
+    assert(attached() && "Cannot get a data block from a detached ArrayBuffer");
+    return impl_->dataForWrite();
   }
 
   /// Get the size of this buffer.
   size_type size() const {
-    return size_;
+    return impl_ ? impl_->size() : 0;
   }
 
   /// Whether this JSArrayBuffer is attached to some data block.
   /// NOTE: a zero size JSArrayBuffer can be attached. Make sure to check both
   /// the attached-ness and the validity of any index before using it.
   bool attached() const {
-    return attached_;
+    return impl_.hasValue();
   }
 
   /// Detaches this buffer from its data block, effectively freeing the storage
   /// and setting this ArrayBuffer to have zero size.  The \p gc argument allows
   /// the GC to be informed of this external memory deletion.
   void detach(GC *gc);
+
+  /// Access the underlying implementation.
+  /// This is provided to support zero-copy ownership transfers.
+  const llvm::Optional<ArrayBufferImpl> &impl() const {
+    return impl_;
+  }
 
  protected:
   static void _finalizeImpl(GCCell *cell, GC *gc);
@@ -95,9 +117,7 @@ class JSArrayBuffer final : public JSObject {
   static void _snapshotAddNodesImpl(GCCell *cell, GC *gc, HeapSnapshot &snap);
 
  private:
-  uint8_t *data_;
-  size_type size_;
-  bool attached_;
+  llvm::Optional<ArrayBufferImpl> impl_{};
 
 #ifdef HERMESVM_SERIALIZE
   explicit JSArrayBuffer(Deserializer &d);

@@ -112,7 +112,7 @@ class JSTypedArrayBase : public JSObject {
   }
 
   uint8_t *begin(PointerBase *base) {
-    return buffer_.getNonNull(base)->getDataBlock() + offset_;
+    return buffer_.getNonNull(base)->getDataBlockForWrite() + offset_;
   }
   uint8_t *end(PointerBase *base) {
     return begin(base) + length_;
@@ -265,7 +265,7 @@ class JSTypedArray final : public JSTypedArrayBase {
 
   iterator begin(PointerBase *base) {
     return reinterpret_cast<T *>(
-        buffer_.getNonNull(base)->getDataBlock() + offset_);
+        buffer_.getNonNull(base)->getDataBlockForWrite() + offset_);
   }
   iterator end(PointerBase *base) {
     return begin(base) + length_;
