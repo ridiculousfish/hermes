@@ -759,6 +759,10 @@ class Runtime : public HandleRootOwner,
   /// Called when various GC events(e.g. collection start/end) happen.
   void onGCEvent(GCEventKind kind, const std::string &extraInfo) override;
 
+  /// \return sizeof(Runtime). This is used to detect preprocessor disagreements
+  /// between callers and implementation.
+  static size_t getSizeofRuntime();
+
 #ifdef HERMESVM_SERIALIZE
   /// Fill the header with current Runtime config
   void populateHeaderRuntimeConfig(SerializeHeader &header);

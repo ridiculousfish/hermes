@@ -1807,6 +1807,10 @@ void Runtime::onGCEvent(GCEventKind kind, const std::string &extraInfo) {
   }
 }
 
+size_t Runtime::getSizeofRuntime() {
+  return sizeof(Runtime);
+}
+
 #ifdef HERMESVM_PROFILER_BB
 
 llvm::Optional<std::tuple<std::string, uint32_t, uint32_t>>
