@@ -76,22 +76,23 @@ class FinalizableNativeFunction final : public NativeFunction {
 
 /// When a HostObject is created, this proxy provides the business
 /// logic for the HostObject's implementation.
+class HostObject;
 class HostObjectProxy {
  public:
   // This is called when the object is finalized.
   virtual ~HostObjectProxy();
 
   // This is called to fetch a property value by name.
-  virtual CallResult<HermesValue> get(SymbolID) = 0;
+  virtual CallResult<HermesValue> get(HostObject *, SymbolID) = 0;
 
   // This is called to set a property value by name.  It will return
   // \c ExecutionStatus, and set the runtime's thrown value as appropriate.
-  virtual CallResult<bool> set(SymbolID, HermesValue) = 0;
+  virtual CallResult<bool> set(HostObject *, SymbolID, HermesValue) = 0;
 
   // This is called to query names of properties.  In case of failure it will
   // return \c ExecutionStatus::EXCEPTION, and set the runtime's thrown Value
   // as appropriate.
-  virtual CallResult<Handle<JSArray>> getHostPropertyNames() = 0;
+  virtual CallResult<Handle<JSArray>> getHostPropertyNames(HostObject *) = 0;
 };
 
 class HostObject final : public JSObject {
@@ -108,15 +109,15 @@ class HostObject final : public JSObject {
       std::shared_ptr<HostObjectProxy> proxy);
 
   CallResult<HermesValue> get(SymbolID name) {
-    return proxy_->get(name);
+    return proxy_->get(this, name);
   }
 
   CallResult<bool> set(SymbolID name, HermesValue value) {
-    return proxy_->set(name, value);
+    return proxy_->set(this, name, value);
   }
 
   CallResult<Handle<JSArray>> getHostPropertyNames() {
-    return proxy_->getHostPropertyNames();
+    return proxy_->getHostPropertyNames(this);
   }
 
   const std::shared_ptr<HostObjectProxy> &getProxy() const {
