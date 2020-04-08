@@ -1004,11 +1004,6 @@ ExecutionStatus JSObject::getComputedPrimitiveDescriptor(
       return ExecutionStatus::RETURNED;
     }
 
-    if (LLVM_UNLIKELY(propObj->flags_.hostObject)) {
-      desc.flags.hostObject = true;
-      desc.flags.writable = true;
-      return ExecutionStatus::RETURNED;
-    }
     if (LLVM_UNLIKELY(propObj->flags_.proxyObject)) {
       desc.flags.proxyObject = true;
       return ExecutionStatus::RETURNED;
@@ -1020,6 +1015,13 @@ ExecutionStatus JSObject::getComputedPrimitiveDescriptor(
     // possible.
     marker.flush();
   } while (propObj);
+
+  if (LLVM_UNLIKELY(selfHandle->flags_.hostObject)) {
+    desc.flags.hostObject = true;
+    desc.flags.writable = true;
+    return ExecutionStatus::RETURNED;
+  }
+
   return ExecutionStatus::RETURNED;
 }
 
