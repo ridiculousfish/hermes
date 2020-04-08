@@ -49,6 +49,7 @@ CELL_KIND(OrderedHashMap)
 
 CELL_CLASS(Object, "Object")
 CELL_KIND(HostObject)
+CELL_CLASS(DecoratedObject, "DecoratedObject")
 
 CELL_CLASS(Error, "Error")
 CELL_CLASS(Arguments, "Arguments")

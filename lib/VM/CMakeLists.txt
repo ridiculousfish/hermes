@@ -28,6 +28,7 @@ set(source_files
   JSCallableProxy.cpp
   JSDataView.cpp
   JSDate.cpp
+  JSDecoratedObject.cpp
   JSError.cpp
   JSGenerator.cpp
   JSObject.cpp
