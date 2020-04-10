@@ -901,6 +901,19 @@ JSObject *JSObject::getNamedDescriptor(
   if (findProperty(selfHandle, runtime, name, expectedFlags, desc))
     return *selfHandle;
 
+  // Check here for host object flag.  This means that "normal" own
+  // properties above win over host-defined properties, but there's no
+  // cost imposed on own property lookups.  This should do what we
+  // need in practice, and we can define host vs js property
+  // disambiguation however we want.  This is here in order to avoid
+  // impacting perf for the common case where an own property exists
+  // in normal storage.
+  if (LLVM_UNLIKELY(selfHandle->flags_.hostObject)) {
+    desc.flags.hostObject = true;
+    desc.flags.writable = true;
+    return *selfHandle;
+  }
+
   if (LLVM_UNLIKELY(selfHandle->flags_.lazyObject)) {
     assert(
         !selfHandle->flags_.proxyObject &&
@@ -954,19 +967,6 @@ JSObject *JSObject::getNamedDescriptor(
         return *mutableSelfHandle;
       }
     } while ((mutableSelfHandle = mutableSelfHandle->parent_.get(runtime)));
-  }
-
-  // Check here for host object flag.  This means that "normal" own
-  // properties above win over host-defined properties, but there's no
-  // cost imposed on own property lookups.  This should do what we
-  // need in practice, and we can define host vs js property
-  // disambiguation however we want.  This is here in order to avoid
-  // impacting perf for the common case where an own property exists
-  // in normal storage.
-  if (LLVM_UNLIKELY(selfHandle->flags_.hostObject)) {
-    desc.flags.hostObject = true;
-    desc.flags.writable = true;
-    return *selfHandle;
   }
 
   return nullptr;
