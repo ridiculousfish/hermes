@@ -556,9 +556,9 @@ ExecutionStatus JSError::constructStackTraceString(
     const StackTraceInfo &sti = selfHandle->stacktrace_->at(index);
     gcScope.flushToMarker(marker);
     // For each stacktrace entry, we add a line with the following format:
-    // at <functionName> (<fileName>:<lineNo>:<columnNo>)
+    // <functionName>@<fileName>:<lineNo>:<columnNo>
 
-    stack.append(u"\n    at ");
+    stack.append(u"\n");
 
     if (!appendFunctionNameAtIndex(runtime, selfHandle, index, stack))
       stack.append(u"anonymous");
@@ -606,7 +606,7 @@ ExecutionStatus JSError::constructStackTraceString(
       isAddress = true;
     }
 
-    stack.append(u" (");
+    stack.append(u"@");
     if (isAddress)
       stack.append(u"address at ");
 
@@ -631,8 +631,6 @@ ExecutionStatus JSError::constructStackTraceString(
 
     numberToString(columnNo, buf, NUMBER_TO_STRING_BUF_SIZE);
     stack.append(buf);
-
-    stack.push_back(u')');
   }
   return ExecutionStatus::RETURNED;
 }
