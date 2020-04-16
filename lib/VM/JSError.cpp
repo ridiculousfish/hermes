@@ -520,6 +520,11 @@ ExecutionStatus JSError::constructStackTraceString(
     runtime->clearThrownValue();
   } else {
     res->get()->copyUTF16String(stack);
+    #warning Hackishly disabled to satisfy grequire.
+    const char *skip = "Error";
+    if (stack.size() == strlen(skip) && std::equal(stack.begin(), stack.end(), skip)) {
+      stack.clear();
+    }
   }
 
   // Virtual offsets are computed by walking the list of bytecode functions. If
@@ -558,7 +563,7 @@ ExecutionStatus JSError::constructStackTraceString(
     // For each stacktrace entry, we add a line with the following format:
     // <functionName>@<fileName>:<lineNo>:<columnNo>
 
-    stack.append(u"\n");
+    if (! stack.empty()) stack.append(u"\n");
 
     if (!appendFunctionNameAtIndex(runtime, selfHandle, index, stack))
       stack.append(u"anonymous");
